@@ -1,8 +1,6 @@
 package auth
 
-import (
-	"github.com/golang-jwt/jwt/v5"
-)
+import "github.com/golang-jwt/jwt/v5"
 
 type SignIn struct {
 	Email string `json:"email"`
@@ -16,7 +14,7 @@ type SendEmailCode struct {
 }
 
 type GenerateToken struct {
-	Id   int
+	Id   int64
 	Role int
 }
 

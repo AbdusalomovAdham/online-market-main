@@ -29,7 +29,7 @@ func GetClient() *redis.Client {
 	})
 }
 
-func (c *Cache) Set(ctx context.Context, key string, value interface{}) error {
+func (c *Cache) Set(ctx context.Context, key string, value any) error {
 	client := GetClient()
 	v, err := json.Marshal(value)
 	if err != nil {
@@ -39,7 +39,7 @@ func (c *Cache) Set(ctx context.Context, key string, value interface{}) error {
 	return err
 }
 
-func (c *Cache) Get(ctx context.Context, key string, dest interface{}) error {
+func (c *Cache) Get(ctx context.Context, key string, dest any) error {
 	client := GetClient()
 	value, err := client.Get(ctx, key).Result()
 	if err != nil {

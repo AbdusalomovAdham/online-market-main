@@ -7,11 +7,11 @@ import (
 	"net/smtp"
 )
 
-type EmailService struct{}
+type UseCase struct{}
 
-func NewEmailService() *EmailService { return &EmailService{} }
+func NewUseCase() *UseCase { return &UseCase{} }
 
-func (es EmailService) SendMailSimple(subject, body string, to []string) error {
+func (euc UseCase) SendMailSimple(subject, body string, to []string) error {
 	auth := smtp.PlainAuth(
 		"",
 		config.GetConfig().SenderEmail,
@@ -32,7 +32,7 @@ func (es EmailService) SendMailSimple(subject, body string, to []string) error {
 	return nil
 }
 
-func (es EmailService) GenerateCode(n int) string {
+func (euc UseCase) GenerateCode(n int) string {
 	b := make([]byte, n)
 	_, err := rand.Read(b)
 	if err != nil {
@@ -40,7 +40,7 @@ func (es EmailService) GenerateCode(n int) string {
 	}
 
 	code := ""
-	for i := 0; i < n; i++ {
+	for i := range n {
 		code += fmt.Sprintf("%d", int(b[i]%10))
 	}
 	return code

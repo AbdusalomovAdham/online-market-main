@@ -14,13 +14,13 @@ import (
 	"github.com/google/uuid"
 )
 
-type Service struct{}
+type UseCase struct{}
 
-func NewService() *Service {
-	return &Service{}
+func NewService() *UseCase {
+	return &UseCase{}
 }
 
-func (s *Service) UploadVideo(ctx context.Context, video *multipart.FileHeader, folder string) (entity.File, error) {
+func (uc *UseCase) UploadVideo(ctx context.Context, video *multipart.FileHeader, folder string) (entity.File, error) {
 	if video == nil {
 		return entity.File{}, errors.New("video not found")
 	}
@@ -70,16 +70,16 @@ func (s *Service) UploadVideo(ctx context.Context, video *multipart.FileHeader, 
 	return info, nil
 }
 
-func (s Service) Delete(ctx context.Context, url string) error {
+func (uc UseCase) Delete(ctx context.Context, url string) error {
 	err := os.Remove("./" + url)
 	return err
 }
 
-func (s Service) MultipleUpload(ctx context.Context, files []*multipart.FileHeader, folder string) ([]entity.File, error) {
+func (uc UseCase) MultipleUpload(ctx context.Context, files []*multipart.FileHeader, folder string) ([]entity.File, error) {
 	var links []entity.File
 
 	for _, f := range files {
-		link, err := s.UploadVideo(ctx, f, folder)
+		link, err := uc.UploadVideo(ctx, f, folder)
 		if err != nil {
 			return nil, err
 		}

@@ -12,7 +12,7 @@ import (
 
 func NewDB() *bun.DB {
 
-	dsn := "postgres://" + config.GetConfig().DBUsername + ":" + config.GetConfig().Port + "@localhost:5432/" + config.GetConfig().DBName + "?sslmode=disable"
+	dsn := "postgres://" + config.GetConfig().DBUsername + ":" + config.GetConfig().DBPassword + "@localhost:5432/" + config.GetConfig().DBName + "?sslmode=disable"
 
 	sqlDb := sql.OpenDB(pgdriver.NewConnector(pgdriver.WithDSN(dsn)))
 

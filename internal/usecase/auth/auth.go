@@ -2,115 +2,79 @@ package auth
 
 import (
 	"context"
+	"encoding/hex"
 	"errors"
 	"main/internal/entity"
-	"main/internal/services/auth"
-	"main/internal/services/user"
+	"main/internal/pkg/config"
+
+	"math/rand"
+	"strings"
+	"time"
+
+	"github.com/golang-jwt/jwt/v5"
+	"golang.org/x/crypto/bcrypt"
 )
 
 type UseCase struct {
-	auth  Auth
-	cache Cache
-	email Email
-	user  User
+	repo Repository
 }
 
-func NewUseCase(auth Auth, cache Cache, email Email, user User) *UseCase {
-	return &UseCase{auth: auth, cache: cache, email: email, user: user}
+func NewUseCase(repo Repository) *UseCase {
+	return &UseCase{repo: repo}
 }
 
-func (au UseCase) SendEmailCode(ctx context.Context, email string) (string, string, error) {
-	emailCode := au.email.GenerateCode(6)
+func (uc *UseCase) GenerateToken(ctx context.Context, data GenerateToken) (string, error) {
+	token := jwt.New(jwt.SigningMethodHS512)
 
-	if err := au.email.SendMailSimple("Email Verification Code", "Your verification code is: "+emailCode, []string{email}); err != nil {
-		return "", "", err
-	}
+	claims := token.Claims.(jwt.MapClaims)
+	claims["exp"] = time.Now().Add(24 * time.Hour).Unix()
+	claims["role"] = data.Role
+	claims["id"] = data.Id
 
-	token, err := au.auth.GenerateResetToken(16)
+	tokenStr, err := token.SignedString([]byte(config.GetConfig().JWTKey))
 	if err != nil {
-		return "", "", err
+		return "", err
 	}
-
-	data := auth.ResendData{Email: email, Code: emailCode}
-	if err := au.cache.Set(ctx, token, data); err != nil {
-		return "", "", err
-	}
-
-	return token, email, nil
+	return tokenStr, nil
 }
 
-func (au UseCase) CheckCode(ctx context.Context, code, token string) (entity.User, string, error) {
-	var data auth.ResendData
-	if err := au.cache.Get(ctx, token, &data); err != nil {
-		return entity.User{}, "", err
-	}
-
-	if code != data.Code {
-		return entity.User{}, "", errors.New("code error")
-	}
-
-	detail, err := au.user.GetByEmail(ctx, data.Email)
+func (uc *UseCase) IsValidToken(ctx context.Context, tokenStr string) (entity.User, error) {
+	claims := new(Claims)
+	token := strings.TrimPrefix(tokenStr, "Bearer ")
+	tkn, err := jwt.ParseWithClaims(token, claims, func(token *jwt.Token) (any, error) {
+		return []byte(config.GetConfig().JWTKey), nil
+	})
 
 	if err != nil {
-		newUser := user.Create{
-			Email: data.Email,
-		}
-
-		detail, err := au.user.CreateUser(ctx, newUser)
-		if err != nil {
-			return entity.User{}, token, err
-		}
-
-		tokenGenerator := auth.GenerateToken{
-			Role: detail.Role,
-			Id:   detail.Id,
-		}
-
-		if err := au.cache.Delete(ctx, token); err != nil {
-			return entity.User{}, "", err
-		}
-
-		token, err = au.auth.GenerateToken(ctx, tokenGenerator)
-		if err != nil {
-			return entity.User{}, "", err
-		}
-
-		return detail, token, nil
+		return entity.User{}, err
 	}
 
-	if err := au.cache.Delete(ctx, token); err != nil {
-		return entity.User{}, "", err
+	if !tkn.Valid {
+		return entity.User{}, errors.New("invalid token")
 	}
 
-	tokenGenerator := auth.GenerateToken{
-		Role: detail.Role,
-		Id:   detail.Id,
-	}
-
-	token, err = au.auth.GenerateToken(ctx, tokenGenerator)
+	userDetail, err := uc.repo.GetById(ctx, claims.ID)
 	if err != nil {
-		return entity.User{}, "", err
+		return entity.User{}, errors.New("user not found")
 	}
-	return detail, token, nil
+	return userDetail, nil
 }
 
-func (au UseCase) ResendCode(ctx context.Context, token string) error {
-	var resetData auth.ResendData
+func (uc *UseCase) HashPassword(password string) (string, error) {
+	bytes, err := bcrypt.GenerateFromPassword([]byte(password), 9)
+	return string(bytes), err
+}
 
-	if err := au.cache.Get(ctx, token, &resetData); err != nil {
-		return err
+func (uc *UseCase) CheckPasswordHash(password, hash string) bool {
+	err := bcrypt.CompareHashAndPassword([]byte(hash), []byte(password))
+	return err == nil
+}
+
+func (uc *UseCase) GenerateResetToken(n int) (string, error) {
+	bytes := make([]byte, n)
+
+	if _, err := rand.Read(bytes); err != nil {
+		return "", err
 	}
-	code := au.email.GenerateCode(6)
-
-	err := au.email.SendMailSimple("Password Reset Code", "Your reset code is: "+code, []string{resetData.Email})
-	if err != nil {
-		return err
-	}
-
-	resetData.Code = code
-	if err := au.cache.Set(ctx, token, resetData); err != nil {
-		return err
-	}
-
-	return nil
+	return hex.EncodeToString(bytes), nil
 }

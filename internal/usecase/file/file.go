@@ -14,14 +14,14 @@ import (
 	"github.com/google/uuid"
 )
 
-type Service struct {
+type UseCase struct {
 }
 
-func NewService() *Service {
-	return &Service{}
+func NewUseCase() *UseCase {
+	return &UseCase{}
 }
 
-func (s *Service) Upload(ctx context.Context, image *multipart.FileHeader, folder string) (entity.File, error) {
+func (uc *UseCase) Upload(ctx context.Context, image *multipart.FileHeader, folder string) (entity.File, error) {
 	if image == nil {
 		return entity.File{}, errors.New("image not found")
 	}
@@ -64,16 +64,16 @@ func (s *Service) Upload(ctx context.Context, image *multipart.FileHeader, folde
 	return info, nil
 }
 
-func (s Service) Delete(ctx context.Context, url string) error {
+func (uc *UseCase) Delete(ctx context.Context, url string) error {
 	err := os.Remove("./" + url)
 	return err
 }
 
-func (s Service) MultipleUpload(ctx context.Context, files []*multipart.FileHeader, folder string) ([]entity.File, error) {
+func (uc *UseCase) MultipleUpload(ctx context.Context, files []*multipart.FileHeader, folder string) ([]entity.File, error) {
 	var links []entity.File
 
 	for _, f := range files {
-		link, err := s.Upload(ctx, f, folder)
+		link, err := uc.Upload(ctx, f, folder)
 		if err != nil {
 			return nil, err
 		}
