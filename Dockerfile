@@ -1,21 +1,25 @@
-# Base image
-FROM golang:1.21-alpine
+# Go image
+FROM golang:1.24-alpine
 
-# Workdir
+# Ish papkasi
 WORKDIR /app
 
-# Dependencies
+# Go modules nusxalash
 COPY go.mod go.sum ./
 RUN go mod download
 
-# Source code
-COPY . .
+# Kodni nusxalash
+COPY internal/ ./internal
+COPY cmd/ ./cmd
+
+# config.yaml ni WORKDIR ichiga nusxalash
+COPY config.yaml ./config.yaml
 
 # Build
-RUN go build -o main .
+RUN go build -o main ./cmd/main.go
 
-# Expose port
+# Portni ochish
 EXPOSE 8080
 
-# Run app
+# Run
 CMD ["./main"]

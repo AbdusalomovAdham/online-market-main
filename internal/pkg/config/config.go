@@ -22,7 +22,7 @@ type Config struct {
 
 func GetConfig() *Config {
 	cfg := Config{}
-	yamlFile, err := ioutil.ReadFile("../config.yaml")
+	yamlFile, err := ioutil.ReadFile("./config.yaml")
 	if err != nil {
 		log.Printf("yamlFile.Get err   #%v ", err)
 	}
