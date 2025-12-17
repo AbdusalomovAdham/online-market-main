@@ -7,7 +7,8 @@ import (
 )
 
 type Repository interface {
-	GetOrCreateUserByPhone(ctx context.Context, phone string) (int64, error)
+	GetOrCreateUserByPhone(ctx context.Context, phone string) (int64, *string, error)
+	UpdateInfo(ctx context.Context, phoneNumber string, info GetInfo) (int64, error)
 }
 
 type Auth interface {

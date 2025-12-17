@@ -18,11 +18,12 @@ type Config struct {
 	SenderEmail  string `yaml:"sender_email"`
 	AppPassword  string `yaml:"app_password"`
 	DBPassword   string `yaml:"db_password"`
+	DBHost       string `yaml:"db_host"`
 }
 
 func GetConfig() *Config {
 	cfg := Config{}
-	yamlFile, err := ioutil.ReadFile("./config.yaml")
+	yamlFile, err := ioutil.ReadFile("../config.yaml")
 	if err != nil {
 		log.Printf("yamlFile.Get err   #%v ", err)
 	}

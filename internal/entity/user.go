@@ -9,7 +9,7 @@ import (
 type User struct {
 	bun.BaseModel `bun:"table:users"`
 
-	Id          int       `json:"id" bun:"id,pk,autoincrement"`
+	Id          int64     `json:"id" bun:"id,pk,autoincrement"`
 	Avatar      *string   `json:"avatar" bun:"avatar"`
 	FirstName   string    `json:"first_name" bun:"first_name"`
 	LastName    string    `json:"last_name" bun:"last_name"`
@@ -31,6 +31,8 @@ type User struct {
 
 //Role
 
-//1-super admin
-//2-admin
-//3-user
+//1-admin
+//2-seller
+//3-customer
+//4-distributor
+//5-operator

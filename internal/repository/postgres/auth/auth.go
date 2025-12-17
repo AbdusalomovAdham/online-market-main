@@ -1,4 +1,4 @@
-package user
+package auth
 
 import (
 	"context"
@@ -28,26 +28,25 @@ func (r Repository) Create(ctx context.Context, user *auth.Create, phoneNumber s
 	return nil
 }
 
-func (r Repository) GetOrCreateUserByPhone(ctx context.Context, phone string) (int64, error) {
+func (r Repository) GetOrCreateUserByPhone(ctx context.Context, phone string) (int64, *string, error) {
+	var firstName string
 	var id int64
-
-	query := `SELECT id FROM users WHERE phone_number = ? LIMIT 1`
-	err := r.QueryRowContext(ctx, query, phone).Scan(&id)
+	query := `SELECT id, first_name FROM users WHERE phone_number = ?`
+	err := r.QueryRowContext(ctx, query, phone).Scan(&id, &firstName)
 	if err == nil {
-		return id, nil
+		return id, &firstName, nil
 	}
 
 	if err != sql.ErrNoRows {
-		return 0, err
+		return 0, nil, err
+	} else {
+		insertQuery := `INSERT INTO users (phone_number, role, created_at) VALUES (?, ?, NOW()) RETURNING id, first_name`
+		err := r.QueryRowContext(ctx, insertQuery, phone, 3).Scan(&id, &firstName)
+		if err != nil {
+			return 0, nil, err
+		}
 	}
-
-	insertQuery := `INSERT INTO users (phone_number) VALUES (?)`
-	res, err := r.ExecContext(ctx, insertQuery, phone)
-	if err != nil {
-		return 0, err
-	}
-
-	return res.LastInsertId()
+	return id, nil, nil
 }
 
 func (r Repository) GetById(ctx context.Context, id int) (entity.User, error) {
@@ -58,4 +57,15 @@ func (r Repository) GetById(ctx context.Context, id int) (entity.User, error) {
 		return entity.User{}, err
 	}
 	return detail, nil
+}
+
+func (r Repository) UpdateInfo(ctx context.Context, phoneNumber string, info auth.GetInfo) (int64, error) {
+	var id int64
+	query := `UPDATE users SET first_name = ?, last_name = ? WHERE phone_number = ? RETURNING id`
+	err := r.QueryRowContext(ctx, query, info.FirstName, info.LastName, phoneNumber).Scan(&id)
+	if err != nil {
+		return 0, err
+	}
+
+	return id, nil
 }

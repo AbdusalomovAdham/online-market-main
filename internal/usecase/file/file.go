@@ -71,13 +71,16 @@ func (uc *UseCase) Delete(ctx context.Context, url string) error {
 
 func (uc *UseCase) MultipleUpload(ctx context.Context, files []*multipart.FileHeader, folder string) ([]entity.File, error) {
 	var links []entity.File
-
-	for _, f := range files {
+	count := len(files)
+	for i, f := range files {
 		link, err := uc.Upload(ctx, f, folder)
 		if err != nil {
 			return nil, err
 		}
-		links = append(links, link)
+		if count > i {
+			link.Id = int32(i + 1)
+			links = append(links, link)
+		}
 	}
 
 	return links, nil

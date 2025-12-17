@@ -5,19 +5,21 @@ services:
       dockerfile: Dockerfile
     container_name: online_market_backend
     ports:
-      - "8081:8080"
+      - "8989:8989"
     volumes:
       - ./config.yaml:/app/config.yaml
+      - ./internal:/app/internal
+      - ./cmd:/app/cmd
     environment:
-      - PORT=8080
+      - PORT=8989
       - REDIS_HOST=redis
-      - REDIS_DB=0
-      - REDIS_EXPIRES=3600
+      - REDIS_DB=1
+      - REDIS_EXPIRES=10
       - POSTGRES_HOST=postgres
       - POSTGRES_PORT=5432
-      - POSTGRES_USER=admin
-      - POSTGRES_PASSWORD=admin123
-      - POSTGRES_DB=onlinemarket
+      - POSTGRES_USER=postgres
+      - POSTGRES_PASSWORD=1
+      - POSTGRES_DB=online_market
     depends_on:
       - redis
       - postgres
@@ -33,9 +35,9 @@ services:
     container_name: online_market_postgres
     restart: always
     environment:
-      POSTGRES_USER: admin
-      POSTGRES_PASSWORD: admin123
-      POSTGRES_DB: onlinemarket
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: 1
+      POSTGRES_DB: online_market
     ports:
       - "5432:5432"
     volumes:

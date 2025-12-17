@@ -1,7 +1,7 @@
 package entity
 
 type File struct {
-	ID           int    `json:"id"`
+	Id           int32  `json:"id"`
 	Path         string `json:"path"`
 	Size         string `json:"size"`
 	SavedName    string `json:"saved_name"`

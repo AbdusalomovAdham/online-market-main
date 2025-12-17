@@ -1,5 +1,6 @@
 db_name: online_market
 db_username: postgres
+db_host: postgres
 db_password: 1
 port: 8989
 jwt_key: osg
