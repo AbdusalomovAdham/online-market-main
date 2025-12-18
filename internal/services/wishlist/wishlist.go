@@ -44,10 +44,10 @@ func (s *Service) Create(ctx context.Context, productId Create, authHeader strin
 	return id, nil
 }
 
-func (s *Service) Delete(ctx context.Context, wishlistId int64, authHeader string) error {
+func (s *Service) Delete(ctx context.Context, wishlistItemId int64, authHeader string) error {
 	isValidToken, err := s.auth.IsValidToken(ctx, authHeader)
 	if err != nil {
 		return err
 	}
-	return s.repo.Delete(ctx, wishlistId, isValidToken.Id)
+	return s.repo.Delete(ctx, wishlistItemId, isValidToken.Id)
 }

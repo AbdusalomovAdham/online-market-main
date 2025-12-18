@@ -94,7 +94,7 @@ func (as Controller) DeleteOrder(c *gin.Context) {
 
 	orderIdStr := c.Param("id")
 	if orderIdStr == "" {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "Order ID is missing"})
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Order Id is missing"})
 		return
 	}
 

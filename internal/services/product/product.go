@@ -38,8 +38,17 @@ func (s Service) GetById(ctx context.Context, id int64) (Get, error) {
 	return data, nil
 }
 
-func (s Service) GetList(ctx context.Context, filter entity.Filter) ([]Get, int, error) {
-	data, count, err := s.repo.GetList(ctx, filter)
+func (s Service) GetList(ctx context.Context, filter entity.Filter, authHeader string) ([]Get, int, error) {
+	if authHeader != "" {
+		isValidToken, err := s.auth.IsValidToken(ctx, authHeader)
+		if err != nil {
+			return nil, 0, err
+		}
+		data, count, err := s.repo.GetList(ctx, filter, &isValidToken.Id)
+		return data, count, nil
+	}
+
+	data, count, err := s.repo.GetList(ctx, filter, nil)
 	if err != nil {
 		return nil, 0, err
 	}

@@ -6,15 +6,13 @@ import (
 	"github.com/uptrace/bun"
 )
 
-type OrderItem struct {
-	bun.BaseModel `bun:"table:order_items"`
+type Cart struct {
+	bun.BaseModel `bun:"table:carts"`
 
-	Id        int64   `json:"id" bun:"id,pk,autoincrement"`
-	OrderId   int64   `json:"order_id" bun:"order_id"`
-	ProductId int64   `json:"product_id" bun:"product_id"`
-	Quantity  int64   `json:"quantity" bun:"quantity"`
-	Price     float64 `json:"price" bun:"price"`
-	Total     float64 `json:"total" bun:"total"`
+	Id          int64   `json:"id" bun:"id,pk,autoincrement"`
+	CustomerId  int64   `json:"customer_id" bun:"customer_id"`
+	Status      bool    `json:"status" bun:"status"`
+	TotalAmount float64 `json:"total_amount" bun:"total_amount"`
 
 	CreatedAt time.Time  `json:"created_at" bun:"created_at"`
 	CreatedBy *string    `json:"created_by" bun:"created_by"`

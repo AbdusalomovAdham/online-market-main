@@ -6,11 +6,12 @@ import (
 	"github.com/uptrace/bun"
 )
 
-type Wishlist struct {
-	bun.BaseModel `bun:"table:wishlists"`
+type WishlistItem struct {
+	bun.BaseModel `bun:"table:wishlist_items"`
 
 	Id         int64 `json:"id" bun:"id,pk,autoincrement"`
-	CustomerId int64 `json:"customer_id" bun:"customer_id"`
+	ProductId  int64 `json:"product_id" bun:"product_id"`
+	WishlistId int64 `json:"wishlist_id" bun:"wishlist_id"`
 
 	CreatedAt time.Time  `json:"created_at" bun:"created_at"`
 	CreatedBy int64      `json:"-" bun:"created_by"`

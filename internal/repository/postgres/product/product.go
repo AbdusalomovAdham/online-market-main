@@ -52,7 +52,7 @@ func (r Repository) GetById(ctx context.Context, id int64) (product.Get, error) 
 			p.description,
 			p.price,
 			p.stock_quantity,
-			p.rating,
+			p.rating_avg,
 			p.seller_id,
 			p.category_id,
 			p.views_count,
@@ -79,11 +79,11 @@ func (r Repository) GetById(ctx context.Context, id int64) (product.Get, error) 
 	return data, nil
 }
 
-func (r Repository) GetList(ctx context.Context, filter entity.Filter) ([]product.Get, int, error) {
+func (r Repository) GetList(ctx context.Context, filter entity.Filter, userId *int64) ([]product.Get, int, error) {
 	var data []product.Get
 	var limitQuery, offsetQuery string
 
-	whereQuery := "WHERE p.deleted_at IS NULL AND p.status = true "
+	whereQuery := "WHERE p.deleted_at IS NULL AND p.status = true"
 	if filter.Limit != nil {
 		limitQuery = fmt.Sprintf("LIMIT %d", *filter.Limit)
 	}
@@ -116,7 +116,7 @@ func (r Repository) GetList(ctx context.Context, filter entity.Filter) ([]produc
 			p.description,
 			p.price,
 			p.stock_quantity,
-			p.rating,
+			p.rating_avg,
 			p.seller_id,
 			p.category_id,
 			p.views_count,
@@ -133,11 +133,29 @@ func (r Repository) GetList(ctx context.Context, filter entity.Filter) ([]produc
 	if err != nil {
 		return nil, 0, err
 	}
-
 	defer rows.Close()
 
 	if err := r.ScanRows(ctx, rows, &data); err != nil {
 		return nil, 0, err
+	}
+
+	wishlistMap := make(map[int64]bool)
+	if userId != nil {
+		wlQuery := `SELECT product_id FROM wishlists WHERE user_id = ? AND status = true AND deleted_at IS NULL`
+		wlRows, err := r.QueryContext(ctx, wlQuery, *userId)
+		if err == nil {
+			defer wlRows.Close()
+			var pid int64
+			for wlRows.Next() {
+				if err := wlRows.Scan(&pid); err == nil {
+					wishlistMap[pid] = true
+				}
+			}
+		}
+	}
+
+	for i := range data {
+		data[i].IsWishlist = wishlistMap[data[i].Id]
 	}
 
 	countQuery := `SELECT COUNT(p.id) FROM products p WHERE p.deleted_at IS NULL AND p.status = true`
@@ -148,10 +166,9 @@ func (r Repository) GetList(ctx context.Context, filter entity.Filter) ([]produc
 	defer countRows.Close()
 
 	count := 0
-
 	if err = r.ScanRows(ctx, countRows, &count); err != nil {
 		return nil, 0, fmt.Errorf("select product count: %w", err)
 	}
-	return data, count, nil
 
+	return data, count, nil
 }

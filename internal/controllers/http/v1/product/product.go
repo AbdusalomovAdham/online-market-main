@@ -124,8 +124,8 @@ func (as Controller) GetProductsList(c *gin.Context) {
 		filter.Order = &orderQ[0]
 	}
 	ctx := context.Background()
-
-	list, count, err := as.service.GetList(ctx, filter)
+	authHeader := c.GetHeader("Authorization")
+	list, count, err := as.service.GetList(ctx, filter, authHeader)
 	if err != nil {
 		c.JSON(http.StatusOK, gin.H{
 			"message": err.Error(),
@@ -140,5 +140,4 @@ func (as Controller) GetProductsList(c *gin.Context) {
 			"count":   count,
 		},
 	})
-
 }
