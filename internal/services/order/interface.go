@@ -7,11 +7,17 @@ import (
 
 type Repository interface {
 	Create(ctx context.Context, order Create, userId int64) error
-	GetList(ctx context.Context, userId int64) ([]Get, error)
+	GetList(ctx context.Context, userId int64, lang string) ([]Get, error)
 	GetById(ctx context.Context, orderId, userId int64) (Get, error)
 	Delete(ctx context.Context, orderId int64, userId int64) error
 }
 
 type Auth interface {
 	IsValidToken(ctx context.Context, tokenStr string) (entity.User, error)
+}
+
+type Cache interface {
+	Set(ctx context.Context, key string, value any) error
+	Get(ctx context.Context, key string, dest any) error
+	Delete(ctx context.Context, key string) error
 }

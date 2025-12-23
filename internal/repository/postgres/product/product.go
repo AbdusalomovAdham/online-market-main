@@ -41,15 +41,15 @@ func IncrementViewCount(ctx context.Context, productId int64, r *Repository) err
 	return err
 }
 
-func (r Repository) GetById(ctx context.Context, id int64) (product.Get, error) {
+func (r Repository) GetById(ctx context.Context, id int64, lang string) (product.Get, error) {
 	IncrementViewCount(ctx, id, &r)
 	var data product.Get
 	log.Println("id", id)
 	query := `
 			SELECT
 			p.id,
-			p.name,
-			p.description,
+			p.name ->> ? as name,
+			p.description ->> ? as description,
 			p.price,
 			p.stock_quantity,
 			p.rating_avg,
@@ -66,7 +66,7 @@ func (r Repository) GetById(ctx context.Context, id int64) (product.Get, error) 
 			LEFT JOIN users u ON p.seller_id = u.id
 			WHERE p.id = ? AND p.deleted_at IS NULL AND p.status = true
 		`
-	rows, err := r.QueryContext(ctx, query, id)
+	rows, err := r.QueryContext(ctx, query, lang, lang, id)
 	if err != nil {
 		return product.Get{}, err
 	}
@@ -96,6 +96,30 @@ func (r Repository) GetList(ctx context.Context, filter entity.Filter, userId *i
 		whereQuery += fmt.Sprintf(" AND p.category_id = %d", *filter.CategoryId)
 	}
 
+	if filter.DiscountOnly != nil {
+		whereQuery += " AND p.discount_percent > 0"
+	}
+
+	// min price
+	if filter.PriceMin != nil {
+		whereQuery += fmt.Sprintf(" AND p.price >= %f", *filter.PriceMin)
+	}
+
+	// max price
+	if filter.PriceMax != nil {
+		whereQuery += fmt.Sprintf(" AND p.price <= %f", *filter.PriceMax)
+	}
+
+	// rating
+	if filter.Rating != nil {
+		whereQuery += fmt.Sprintf(" AND p.rating_avg >= %d", *filter.Rating)
+	}
+
+	// search
+	if filter.Search != nil && *filter.Search != "" {
+		whereQuery += fmt.Sprintf(" AND p.name ->> '%s' ILIKE '%%%s%%' OR p.description ->> '%s' ILIKE '%%%s%%' ", *filter.Language, *filter.Search, *filter.Language, *filter.Search)
+	}
+
 	orderQuery := "ORDER BY p.id DESC"
 	if filter.Order != nil && *filter.Order != "" {
 		parts := strings.Fields(*filter.Order)
@@ -112,8 +136,8 @@ func (r Repository) GetList(ctx context.Context, filter entity.Filter, userId *i
 	query := fmt.Sprintf(`
 		SELECT
 			p.id,
-			p.name,
-			p.description,
+			p.name ->> '%s' as name,
+			p.description ->> '%s' as description,
 			p.price,
 			p.stock_quantity,
 			p.rating_avg,
@@ -127,7 +151,7 @@ func (r Repository) GetList(ctx context.Context, filter entity.Filter, userId *i
 		%s
 		%s
 		%s
-	`, whereQuery, orderQuery, limitQuery, offsetQuery)
+	`, *filter.Language, *filter.Language, whereQuery, orderQuery, limitQuery, offsetQuery)
 
 	rows, err := r.QueryContext(ctx, query)
 	if err != nil {

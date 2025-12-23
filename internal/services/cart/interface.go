@@ -15,3 +15,9 @@ type Repository interface {
 type Auth interface {
 	IsValidToken(ctx context.Context, tokenStr string) (entity.User, error)
 }
+
+type Cache interface {
+	Set(ctx context.Context, key string, value any) error
+	Get(ctx context.Context, key string, dest any) error
+	Delete(ctx context.Context, key string) error
+}

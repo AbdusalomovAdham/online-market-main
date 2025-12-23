@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
+	"fmt"
 	"log"
 	"time"
 
@@ -37,27 +38,30 @@ func (r *Repository) Create(ctx context.Context, order order.Create, customerId 
 	}
 
 	query := `
-			INSERT INTO orders (
-					order_status,
-					payment_status,
+			INSERT INTO
+			orders (
+					order_status_id,
+					payment_id,
 					delivery_date,
 					total_amount,
 					customer_id,
 					created_at,
 					created_by
-			) VALUES (?, ?, ?, ?, ?, ?, ?) RETURNING id`
+			) VALUES (?, ?, ?, ?, ?, ?, ?)
+		RETURNING id`
 
 	err := r.QueryRowContext(
 		ctx,
 		query,
-		order.OrderStatus,
-		order.PaymentStatus,
+		order.OrderStatusId,
+		order.PaymentId,
 		order.DeliveryDate,
 		order.TotalAmount,
 		customerId,
 		time.Now(),
 		customerId,
 	).Scan(&orderId)
+
 	if err != nil {
 		return err
 	}
@@ -74,7 +78,6 @@ func (r *Repository) Create(ctx context.Context, order order.Create, customerId 
 			) VALUES (?, ?, ?, ?, ?, ?, ?)`
 
 	for _, item := range order.Items {
-		log.Println("item", item.Price)
 		total := item.Price * float64(item.Quantity)
 		_, err := r.ExecContext(
 			ctx,
@@ -95,15 +98,18 @@ func (r *Repository) Create(ctx context.Context, order order.Create, customerId 
 	return nil
 }
 
-func (r *Repository) GetList(ctx context.Context, userId int64) ([]order.Get, error) {
-
+func (r *Repository) GetList(ctx context.Context, userId int64, lang string) ([]order.Get, error) {
 	var orders []order.Get
-	query := `
-        SELECT id, order_status, payment_status, delivery_date, total_amount
-        FROM orders
-        WHERE customer_id = ? AND deleted_at IS NULL
-    `
-	rows, err := r.QueryContext(ctx, query, userId)
+
+	query := fmt.Sprintf(`SELECT
+		o.id, os.name ->> '%s' AS order_status, ps.name ->> '%s' AS payment_status, o.delivery_date, o.total_amount, o.order_status_id, o.payment_id
+		FROM orders o
+		LEFT JOIN order_statuses os ON os.id = o.order_status_id
+		LEFT JOIN payments ps ON ps.id = o.payment_id
+		WHERE o.customer_id = '%d' AND o.deleted_at IS NULL`,
+		lang, lang, userId)
+
+	rows, err := r.QueryContext(ctx, query)
 	if err != nil {
 		return nil, err
 	}
@@ -111,7 +117,15 @@ func (r *Repository) GetList(ctx context.Context, userId int64) ([]order.Get, er
 
 	for rows.Next() {
 		var o order.Get
-		if err := rows.Scan(&o.Id, &o.OrderStatus, &o.PaymentStatus, &o.DeliveryDate, &o.TotalAmount); err != nil {
+		if err := rows.Scan(
+			&o.Id,
+			&o.OrderStatus,
+			&o.PaymentStatus,
+			&o.DeliveryDate,
+			&o.TotalAmount,
+			&o.OrderStatusId,
+			&o.PaymentId,
+		); err != nil {
 			return nil, err
 		}
 		o.Items = []order.GetItems{}
@@ -119,35 +133,46 @@ func (r *Repository) GetList(ctx context.Context, userId int64) ([]order.Get, er
 	}
 
 	if len(orders) == 0 {
-		return nil, errors.New("No orders found")
+		return nil, errors.New("no orders found")
 	}
 
 	ordersId := make([]int64, len(orders))
 	orderMap := make(map[int64]*order.Get)
+
 	for i := range orders {
 		ordersId[i] = orders[i].Id
 		orderMap[orders[i].Id] = &orders[i]
 	}
 
 	itemsQuery := `
-				SELECT
-			    oi.id,
-			    oi.order_id,
-			    COALESCE(p.name, '') AS name,
-			    COALESCE(p.description, '') AS description,
-			    COALESCE(p.price, 0) AS price,
-				COALESCE(p.images, '[]') AS images,
-			    oi.quantity,
-			    COALESCE(p.rating, 0) AS rating
-			FROM order_items oi
-			LEFT JOIN products p ON p.id = oi.product_id
-			WHERE oi.order_id = ANY(?) AND p.deleted_at IS NULL AND p.status = true AND oi.deleted_at IS NULL
-    `
-
-	itemRows, err := r.QueryContext(ctx, itemsQuery, pq.Array(ordersId))
+		SELECT
+			oi.id,
+			oi.order_id,
+			p.name ->> ? AS name,
+			p.description ->> ? AS description,
+			COALESCE(p.price, 0) AS price,
+			COALESCE(p.images, '[]'::jsonb) AS images,
+			oi.quantity,
+			COALESCE(p.rating_avg, 0) AS rating
+		FROM order_items oi
+		LEFT JOIN products p ON p.id = oi.product_id
+		WHERE oi.order_id = ANY(?)
+		  AND p.deleted_at IS NULL
+		  AND p.status = true
+		  AND oi.deleted_at IS NULL
+`
+	log.Println(pq.Array(ordersId))
+	itemRows, err := r.QueryContext(
+		ctx,
+		itemsQuery,
+		lang,               // $1
+		lang,               // $2
+		pq.Array(ordersId), // $3
+	)
 	if err != nil {
 		return nil, err
 	}
+
 	defer itemRows.Close()
 
 	for itemRows.Next() {
@@ -158,11 +183,20 @@ func (r *Repository) GetList(ctx context.Context, userId int64) ([]order.Get, er
 			Description string
 			Price       float64
 			Quantity    int
-			Rating      int8
+			Rating      float32
 			Images      []byte
 		}
 
-		if err := itemRows.Scan(&item.Id, &item.OrderId, &item.Name, &item.Description, &item.Price, &item.Images, &item.Quantity, &item.Rating); err != nil {
+		if err := itemRows.Scan(
+			&item.Id,
+			&item.OrderId,
+			&item.Name,
+			&item.Description,
+			&item.Price,
+			&item.Images,
+			&item.Quantity,
+			&item.Rating,
+		); err != nil {
 			return nil, err
 		}
 
@@ -193,14 +227,14 @@ func (r Repository) GetById(ctx context.Context, orderId, userId int64) (order.G
 	var o order.Get
 
 	query := `
-        SELECT id, order_status, payment_status, delivery_date, total_amount
+        SELECT id, order_status_id, payment_id, delivery_date, total_amount
         FROM orders
         WHERE id = ? AND customer_id = ? AND deleted_at IS NULL
     `
 	if err := r.QueryRowContext(ctx, query, orderId, userId).Scan(
 		&o.Id,
-		&o.OrderStatus,
-		&o.PaymentStatus,
+		&o.OrderStatusId,
+		&o.PaymentId,
 		&o.DeliveryDate,
 		&o.TotalAmount,
 	); err != nil {
@@ -210,19 +244,27 @@ func (r Repository) GetById(ctx context.Context, orderId, userId int64) (order.G
 	o.Items = []order.GetItems{}
 
 	itemsQuery := `
-        SELECT
-            oi.id,
-            oi.order_id,
-            COALESCE(p.name, '') AS name,
-            COALESCE(p.description, '') AS description,
-            COALESCE(p.price, 0) AS price,
-            COALESCE(p.images, '[]') AS images,
-            oi.quantity,
-            COALESCE(p.rating, 0) AS rating
-        FROM order_items oi
-        LEFT JOIN products p ON p.id = oi.product_id
-        WHERE oi.order_id = ? AND p.deleted_at IS NULL AND p.status = true AND oi.deleted_at IS NULL
-    `
+		SELECT
+			oi.id,
+			oi.order_id,
+			p.name ->> ? AS name,
+			p.description ->> ? AS description,
+			COALESCE(p.price, 0) AS price,
+			CASE
+				WHEN p.images IS NULL THEN '[]'::jsonb
+				WHEN jsonb_typeof(p.images) = 'array' THEN p.images
+				ELSE '[]'::jsonb
+			END AS images,
+			oi.quantity,
+			COALESCE(p.rating, 0) AS rating
+		FROM order_items oi
+		LEFT JOIN products p ON p.id = oi.product_id
+		WHERE oi.order_id = ANY($1)
+		  AND p.deleted_at IS NULL
+		  AND p.status = true
+		  AND oi.deleted_at IS NULL
+`
+
 	itemRows, err := r.QueryContext(ctx, itemsQuery, orderId)
 	if err != nil {
 		return o, err
@@ -237,7 +279,7 @@ func (r Repository) GetById(ctx context.Context, orderId, userId int64) (order.G
 			Description string
 			Price       float64
 			Quantity    int
-			Rating      int8
+			Rating      float32
 			Images      []byte
 		}
 

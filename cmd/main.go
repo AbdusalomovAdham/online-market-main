@@ -66,10 +66,10 @@ func main() {
 
 	//services
 	authService := auth_service.NewService(authRepository, newCache, sendSMSUseCase, authUseCase)
-	wishlistService := wishlist_service.NewService(wishlistRepository, authUseCase)
+	wishlistService := wishlist_service.NewService(wishlistRepository, authUseCase, newCache)
 	productService := product_service.NewService(productRepository, authUseCase, fileUseCase)
-	orderService := order_service.NewService(orderRepository, authUseCase)
-	cartService := cart_service.NewService(cartRepository, authUseCase)
+	orderService := order_service.NewService(orderRepository, authUseCase, newCache)
+	cartService := cart_service.NewService(cartRepository, authUseCase, newCache)
 	ratingService := rating_service.NewService(ratingRepository, authUseCase)
 
 	//controller

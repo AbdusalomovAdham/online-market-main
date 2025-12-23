@@ -10,8 +10,8 @@ type Order struct {
 	bun.BaseModel `bun:"table:orders"`
 
 	Id            int64       `json:"id" bun:"id,pk,autoincrement"`
-	OrderStatus   string      `json:"order_status" bun:"order_status"`
-	PaymentStatus string      `json:"payment_status" bun:"payment_status"`
+	OrderStatusId int         `json:"order_status_id" bun:"order_status_id"`
+	PaymentId     int         `json:"payment_id" bun:"payment_id"`
 	DeliveryDate  string      `json:"delivery_date" bun:"delivery_date"`
 	TotalAmount   float64     `json:"total_amount" bun:"total_amount"`
 	CustomerId    int64       `json:"customer_id" bun:"customer_id"`

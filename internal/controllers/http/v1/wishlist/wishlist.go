@@ -20,6 +20,10 @@ func NewController(service *wishlist.Service) Controller {
 }
 
 func (as Controller) WishList(c *gin.Context) {
+	lang := c.GetHeader("Accept-Language")
+	if lang == "" {
+		lang = "uz"
+	}
 	authHeader := c.GetHeader("Authorization")
 	if authHeader == "" {
 		c.JSON(http.StatusUnauthorized, gin.H{"error": "Unauthorized"})
@@ -27,7 +31,7 @@ func (as Controller) WishList(c *gin.Context) {
 	}
 
 	ctx := context.Background()
-	wishlistItems, err := as.service.GetList(ctx, authHeader)
+	wishlistItems, err := as.service.GetList(ctx, authHeader, lang)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return

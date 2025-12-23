@@ -20,7 +20,7 @@ func NewRepository(DB *bun.DB) *Repository {
 	return &Repository{DB: DB}
 }
 
-func (r *Repository) GetList(ctx context.Context, userId int64) ([]wishlist.GetList, error) {
+func (r *Repository) GetList(ctx context.Context, userId int64, lang string) ([]wishlist.GetList, error) {
 	log.Println("userId", userId)
 	query := `
         SELECT
@@ -30,21 +30,21 @@ func (r *Repository) GetList(ctx context.Context, userId int64) ([]wishlist.GetL
             wli.id AS item_id,
             wli.product_id,
             wli.created_at AS item_created_at,
-            p.name,
+            p.name ->> ? as name,
             p.price,
             p.images,
             p.views_count,
             p.discount_percent,
             p.category_id,
-            p.rating,
-            p.description
+            p.rating_avg,
+            p.description ->> ? as name
         FROM wishlists wl
         LEFT JOIN wishlist_items wli ON wl.id = wli.wishlist_id
         LEFT JOIN products p ON wli.product_id = p.id
         WHERE wl.customer_id = ? AND wl.deleted_at IS NULL AND wl.status = true AND (p.deleted_at IS NULL OR p.id IS NULL AND p.status = true) AND wli.deleted_at IS NULL
     `
 
-	rows, err := r.QueryContext(ctx, query, userId)
+	rows, err := r.QueryContext(ctx, query, lang, lang, userId)
 	if err != nil {
 		return nil, err
 	}
@@ -64,7 +64,7 @@ func (r *Repository) GetList(ctx context.Context, userId int64) ([]wishlist.GetL
 		var price sql.NullFloat64
 		var imagesJSON []byte
 		var viewsCount, discountPercent, categoryId sql.NullInt64
-		var rating sql.NullInt64
+		var rating sql.NullFloat64
 
 		err := rows.Scan(
 			&wlID, &customerID, &wlCreatedAt,
@@ -102,7 +102,7 @@ func (r *Repository) GetList(ctx context.Context, userId int64) ([]wishlist.GetL
 				ViewsCount:      viewsCount.Int64,
 				DiscountPercent: int64(discountPercent.Int64),
 				CategoryId:      categoryId.Int64,
-				Rating:          int8(rating.Int64),
+				Rating:          int8(rating.Float64),
 				CreatedAt:       itemCreatedAt.Time,
 				Images:          &imagesArray,
 			}

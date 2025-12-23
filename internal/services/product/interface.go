@@ -8,7 +8,7 @@ import (
 
 type Repository interface {
 	Create(ctx context.Context, data Create, userId int64) (int64, error)
-	GetById(ctx context.Context, id int64) (Get, error)
+	GetById(ctx context.Context, id int64, lang string) (Get, error)
 	GetList(ctx context.Context, filter entity.Filter, userId *int64) ([]Get, int, error)
 }
 

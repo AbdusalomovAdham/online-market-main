@@ -193,7 +193,7 @@ func (r *Repository) GetList(ctx context.Context, customerId int64) ([]cart.Get,
 			p.description,
 			p.images,
 			p.views_count,
-			p.rating
+			p.rating_avg
 		FROM carts c
 		LEFT JOIN cart_items ci ON c.id = ci.cart_id AND ci.deleted_at IS NULL
 		LEFT JOIN products p ON ci.product_id = p.id AND p.deleted_at IS NULL AND p.status = true
@@ -224,7 +224,7 @@ func (r *Repository) GetList(ctx context.Context, customerId int64) ([]cart.Get,
 			description sql.NullString
 			imagesJSON  []byte
 			viewsCount  sql.NullInt64
-			rating      sql.NullInt64
+			rating      sql.NullFloat64
 		)
 
 		err := rows.Scan(
@@ -270,7 +270,7 @@ func (r *Repository) GetList(ctx context.Context, customerId int64) ([]cart.Get,
 				Images:      &imagesArray,
 				Quantity:    int(itemQuantity.Int64),
 				Price:       itemPrice.Float64,
-				Rating:      int8(rating.Int64),
+				Rating:      int8(rating.Float64),
 				ViewsCount:  int(viewsCount.Int64),
 				ProductId:   productID.Int64,
 			})

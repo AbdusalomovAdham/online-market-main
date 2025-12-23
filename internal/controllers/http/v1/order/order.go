@@ -46,8 +46,9 @@ func (as Controller) GetOrderList(c *gin.Context) {
 		return
 	}
 
+	lang := c.GetHeader("Accept-Language")
 	ctx := context.Background()
-	orderList, err := as.service.GetList(ctx, authHeader)
+	orderList, err := as.service.GetList(ctx, authHeader, lang)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return

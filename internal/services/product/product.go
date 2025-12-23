@@ -29,8 +29,8 @@ func (s Service) MultipleUpload(ctx context.Context, files []*multipart.FileHead
 	return s.file.MultipleUpload(ctx, files, folder)
 }
 
-func (s Service) GetById(ctx context.Context, id int64) (Get, error) {
-	data, err := s.repo.GetById(ctx, id)
+func (s Service) GetById(ctx context.Context, id int64, lang string) (Get, error) {
+	data, err := s.repo.GetById(ctx, id, lang)
 	if err != nil {
 		return Get{}, err
 	}
